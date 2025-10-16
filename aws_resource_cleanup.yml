@@ -1,0 +1,13 @@
+---
+- hosts: all
+  become: false
+  gather_facts: false
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ lookup('env','AWS_ACCESS_KEY_ID') }}"
+    AWS_SECRET_ACCESS_KEY: "{{ lookup('env','AWS_SECRET_ACCESS_KEY') }}"
+    AWS_REGION: "ap-southeast-2"
+    # Set the proxy if needed to reach the AWS API
+    http_proxy: "http://proxy:12345/"
+    https_proxy: "https://proxy:12345/"
+  roles:
+    - role-aws_resource_cleanup
