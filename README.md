@@ -1,2 +1,2 @@
 # Anisble-AWS
-Ansible scripts for managing AWS resources
+Ansible roles for managing AWS resources
