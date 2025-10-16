@@ -1,0 +1,103 @@
+---
+# Manage these resources:
+# 1. Available EBS volumes
+# 2. Packer Amazon machine images older than 7 days for dev or 90 days for prod
+# 3. Packer EC2 instances
+# 4. Temporary Packer security groups
+# 5. EBS snapshots older than 30 days for dev or 90 days for prod
+# 6. Packer temporary keypairs
+# 7. Provisioned products older than 30 days
+
+- block:
+    - ansible.builtin.debug:
+        msg: "Checking resources for AWS Non-Prod landing zone {{ aws_landing_zone }}"
+      when: aws_landing_zone is match("nnnnnnnnnnnn")
+    - ansible.builtin.debug:
+        msg: "Checking resources for AWS Prod landing zone {{ aws_landing_zone }}"
+      when: aws_landing_zone is match("pppppppppppp")
+
+# Delete any volumes found
+- name: 'Step 1. Available EBS volumes'
+  ansible.builtin.script:
+    cmd: 1_delete_available_ebs_volumes.sh
+    chdir: /usr/local/bin
+    executable: /bin/bash
+
+# Deregister Dev LZ Packer AMI's
+- name: 'Step 2. Packer Amazon machine images older than 14 days'
+  ansible.builtin.script:
+    cmd: 2_deregister_packer_amis.sh 1209600
+    chdir: /usr/local/bin
+    executable: /bin/bash
+  when: aws_landing_zone is match("nnnnnnnnnnnn")
+
+# Deregister Prod LZ Packer AMI's
+- name: 'Step 2. Packer Amazon machine images older than 90 days'
+  ansible.builtin.script:
+    cmd: 2_deregister_packer_amis.sh 7776000
+    chdir: /usr/local/bin
+    executable: /bin/bash
+  when: aws_landing_zone is match("pppppppppppp")
+
+# Terminate any instances found
+- name: 'Step 3. Packer EC2 instances'
+  ansible.builtin.script:
+    cmd: 3_terminate_ec2_instances.sh
+    chdir: /usr/local/bin
+    executable: /bin/bash
+
+# Delete all Packer security groups found
+- name: 'Step 4. Temporary Packer security groups'
+  ansible.builtin.script:
+    cmd: 4_delete_packer_security_groups.sh
+    chdir: /usr/local/bin
+    executable: /bin/bash
+
+# Delete Dev LZ EBS snapshots
+- name: 'Step 5. EBS snapshots older than 30 days for dev'
+  ansible.builtin.script:
+    cmd: 5_delete_ebs_snapshots.sh 2851200 891376935483
+    chdir: /usr/local/bin
+    executable: /bin/bash
+  when: aws_landing_zone is match("nnnnnnnnnnnn")
+
+# Delete Prod LZ EBS snapshots
+- name: 'Step 5. EBS snapshots older than 90 days for prod'
+  ansible.builtin.script:
+    cmd: 5_delete_ebs_snapshots.sh 7776000 21112538809
+    chdir: /usr/local/bin
+    executable: /bin/bash
+  when: aws_landing_zone is match("pppppppppppp")
+
+# Delete all keypairs found
+- name: 'Step 6. Packer temporary keypairs'
+  ansible.builtin.script:
+    cmd: 6_delete_packer_keypairs.sh
+    chdir: /usr/local/bin
+    executable: /bin/bash
+
+# Terminate Service Catalog provisioned products in Dev LZ only
+- name: 'Step 7. Provisioned products older than 30 days'
+  ansible.builtin.script:
+    cmd: 7_terminate_provisioned_products.sh 2851200
+    chdir: /usr/local/bin
+    executable: /bin/bash
+  when: aws_landing_zone is match("nnnnnnnnnnnn")
+
+#- name: 'Email logfile on completion'
+#  ansible.builtin.mail:
+#    host: mailhost
+#    subtype: plain
+#    port: 25
+#    from: 'aap_mailer@com'
+#    to:
+#      - "{{ ops_email }}"
+#    subject: "AWS Resource Cleanup"
+#    body: "Resource cleanup log for AWS account {{ aws_landing_zone }} attached"
+#    attach: "{{ log_file }}"
+
+- name: 'Remove logfile'
+  ansible.builtin.file:
+    path: "{{ log_file }}"
+    state: absent
+  ignore_errors: true
