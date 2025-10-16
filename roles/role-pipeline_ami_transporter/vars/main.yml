@@ -1,0 +1,6 @@
+---
+nonprod_aws_acct: "nnnnnnnnnnnn"
+prod_aws_acct: "nnnnnnnnnnnn"
+key_arn: "ebscmk_arn"
+region: "ap-southeast-2"
+debug_mode: true
