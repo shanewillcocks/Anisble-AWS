@@ -1,0 +1,12 @@
+---
+- hosts: all
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ lookup('env','AWS_ACCESS_KEY_ID') }}"
+    AWS_SECRET_ACCESS_KEY: "{{ lookup('env','AWS_SECRET_ACCESS_KEY') }}"
+    # Set the proxy if needed
+    http_proxy: "http://proxy12345/"
+    https_proxy: "http://proxy:12345/"
+  become: false
+  gather_facts: false
+  roles:
+    - role-aws_ami_transporter
