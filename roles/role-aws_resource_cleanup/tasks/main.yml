@@ -1,20 +1,17 @@
 ---
-# Manage these resources:
-# 1. Available EBS volumes
-# 2. Packer Amazon machine images older than 7 days for dev or 90 days for prod
-# 3. Packer EC2 instances
-# 4. Temporary Packer security groups
-# 5. EBS snapshots older than 30 days for dev or 90 days for prod
-# 6. Packer temporary keypairs
-# 7. Provisioned products older than 30 days
-
 - block:
+    - ansible.builtin.set_fact:
+        is_nonprod: true
+      when: aws_landing_zone is match("nnnnnnnnnnnn")
+    - ansible.builtin.set_fact: 
+        is_prod: true
+      when: aws_landing_zone is match("pppppppppppp")
     - ansible.builtin.debug:
         msg: "Checking resources for AWS Non-Prod landing zone {{ aws_landing_zone }}"
-      when: aws_landing_zone is match("nnnnnnnnnnnn")
+      when: is_nonprod | bool
     - ansible.builtin.debug:
         msg: "Checking resources for AWS Prod landing zone {{ aws_landing_zone }}"
-      when: aws_landing_zone is match("pppppppppppp")
+      when: is_prod | bool
 
 # Delete any volumes found
 - name: 'Step 1. Available EBS volumes'
@@ -29,7 +26,7 @@
     cmd: 2_deregister_packer_amis.sh 1209600
     chdir: /usr/local/bin
     executable: /bin/bash
-  when: aws_landing_zone is match("nnnnnnnnnnnn")
+  when: is_nonprod | bool
 
 # Deregister Prod LZ Packer AMI's
 - name: 'Step 2. Amazon machine images older than 90 days'
@@ -37,7 +34,7 @@
     cmd: 2_deregister_packer_amis.sh 7776000
     chdir: /usr/local/bin
     executable: /bin/bash
-  when: aws_landing_zone is match("pppppppppppp")
+  when: is_prod | bool
 
 # Terminate any instances found
 - name: 'Step 3. EC2 instances'
@@ -59,7 +56,7 @@
     cmd: 5_delete_ebs_snapshots.sh 2851200 891376935483
     chdir: /usr/local/bin
     executable: /bin/bash
-  when: aws_landing_zone is match("nnnnnnnnnnnn")
+  when: is_nonprod | bool
 
 # Delete Prod LZ EBS snapshots
 - name: 'Step 5. EBS snapshots older than 90 days for prod'
@@ -67,7 +64,7 @@
     cmd: 5_delete_ebs_snapshots.sh 7776000 21112538809
     chdir: /usr/local/bin
     executable: /bin/bash
-  when: aws_landing_zone is match("pppppppppppp")
+  when: is_prod | bool
 
 # Delete all keypairs found
 - name: 'Step 6. Temporary keypairs'
@@ -82,14 +79,14 @@
     cmd: 7_terminate_provisioned_products.sh 2851200
     chdir: /usr/local/bin
     executable: /bin/bash
-  when: aws_landing_zone is match("nnnnnnnnnnnn")
+  when: is_nonprod | bool
 
 - name: 'Email logfile on completion'
   ansible.builtin.mail:
     host: mailhost
     subtype: plain
     port: 25
-    from: 'aap_mailer@com'
+    from: 'ansible_mailer@com'
     to:
       - "{{ ops_email }}"
     subject: "AWS Resource Cleanup"
