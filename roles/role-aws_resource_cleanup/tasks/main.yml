@@ -24,7 +24,7 @@
     executable: /bin/bash
 
 # Deregister Dev LZ Packer AMI's
-- name: 'Step 2. Packer Amazon machine images older than 14 days'
+- name: 'Step 2. Amazon machine images older than 14 days'
   ansible.builtin.script:
     cmd: 2_deregister_packer_amis.sh 1209600
     chdir: /usr/local/bin
@@ -32,7 +32,7 @@
   when: aws_landing_zone is match("nnnnnnnnnnnn")
 
 # Deregister Prod LZ Packer AMI's
-- name: 'Step 2. Packer Amazon machine images older than 90 days'
+- name: 'Step 2. Amazon machine images older than 90 days'
   ansible.builtin.script:
     cmd: 2_deregister_packer_amis.sh 7776000
     chdir: /usr/local/bin
@@ -40,16 +40,16 @@
   when: aws_landing_zone is match("pppppppppppp")
 
 # Terminate any instances found
-- name: 'Step 3. Packer EC2 instances'
+- name: 'Step 3. EC2 instances'
   ansible.builtin.script:
     cmd: 3_terminate_ec2_instances.sh
     chdir: /usr/local/bin
     executable: /bin/bash
 
 # Delete all Packer security groups found
-- name: 'Step 4. Temporary Packer security groups'
+- name: 'Step 4. Temporary security groups'
   ansible.builtin.script:
-    cmd: 4_delete_packer_security_groups.sh
+    cmd: 4_delete_security_groups.sh
     chdir: /usr/local/bin
     executable: /bin/bash
 
@@ -70,9 +70,9 @@
   when: aws_landing_zone is match("pppppppppppp")
 
 # Delete all keypairs found
-- name: 'Step 6. Packer temporary keypairs'
+- name: 'Step 6. Temporary keypairs'
   ansible.builtin.script:
-    cmd: 6_delete_packer_keypairs.sh
+    cmd: 6_delete_keypairs.sh
     chdir: /usr/local/bin
     executable: /bin/bash
 
@@ -84,17 +84,17 @@
     executable: /bin/bash
   when: aws_landing_zone is match("nnnnnnnnnnnn")
 
-#- name: 'Email logfile on completion'
-#  ansible.builtin.mail:
-#    host: mailhost
-#    subtype: plain
-#    port: 25
-#    from: 'aap_mailer@com'
-#    to:
-#      - "{{ ops_email }}"
-#    subject: "AWS Resource Cleanup"
-#    body: "Resource cleanup log for AWS account {{ aws_landing_zone }} attached"
-#    attach: "{{ log_file }}"
+- name: 'Email logfile on completion'
+  ansible.builtin.mail:
+    host: mailhost
+    subtype: plain
+    port: 25
+    from: 'aap_mailer@com'
+    to:
+      - "{{ ops_email }}"
+    subject: "AWS Resource Cleanup"
+    body: "Resource cleanup log for AWS account {{ aws_landing_zone }} attached"
+    attach: "{{ log_file }}"
 
 - name: 'Remove logfile'
   ansible.builtin.file:
