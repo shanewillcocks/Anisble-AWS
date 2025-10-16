@@ -1,0 +1,4 @@
+##!/bin/bash
+/usr/local/bin/aws servicecatalog provision-product --provisioned-product-name {{ item.value }}-{{ datestamp }} \
+--product-id {{ product_id.stdout }} --provisioning-artifact-id {{ version_id.stdout }} \
+--provisioning-parameters Key=AMIName,Value={{ item.value }}-{{ datestamp }} Key=AMIId,Value={{ item.key }} Key=TargetAccountId,Value={{ prod_aws_acct }} Key=SSMParameterName,Value={{ key_arn }} --region {{ region }}
