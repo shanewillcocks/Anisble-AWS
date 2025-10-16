@@ -1,0 +1,12 @@
+---
+nonprod_aws_acct: "nnnnnnnnnnnn"
+prod_aws_acct: "nnnnnnnnnnnn"
+key_arn: "ebscmk_arn"
+region: "ap-southeast-2"
+# One name prefix for each AMI to be transported to PRD
+ami_basenames:
+  - "RHEL8"
+  - "RHEL9"
+  - "RHEL10"
+  - "Win2022"
+debug_mode: false
