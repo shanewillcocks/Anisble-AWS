@@ -1,0 +1,61 @@
+---
+# This requires awscli v2 - not compatible with v1
+- name: Create datestamp for images
+  block:
+    - ansible.builtin.shell: date '+%Y%m%d'
+      register: date_reg
+    - ansible.builtin.set_fact:
+        datestamp: "{{ date_reg.stdout }}"
+
+- ansible.builtin.debug:
+    msg: "Call AWS Service Catalog and publish images to AWS acocunt {{ prod_aws_acct }}"
+
+- name: Get Product ID from the Service Catalog
+  ansible.builtin.shell: /usr/local/bin/aws servicecatalog search-products --query "ProductViewSummaries[?Name=='AMI Transporter'].[ProductId]" --output text --region "{{ region }}"
+  register: product_id
+
+- name: Dump Product ID
+  ansible.builtin.debug:
+    msg: "AWS returned Service Catalog Product ID: {{ product_id.stdout }}"
+
+- name: Get the latest Provisioning artefact info and parse the Version ID
+  ansible.builtin.shell: /usr/local/bin/aws servicecatalog list-provisioning-artifacts --product-id "{{ product_id.stdout }}" --query "ProvisioningArtifactDetails[*].Id" --output text --region "{{ region }}"
+  register: version_id
+
+- name: Dump version_id
+  ansible.builtin.debug:
+    msg: "AWS returned Product Version ID: {{ version_id.stdout }}"
+
+- name: Find the latest AMI for each OS
+  ansible.builtin.shell: /usr/local/bin/aws ec2 describe-images --owner "{{ nonprod_aws_acct }}" --filters "Name=name,Values={{ item }}-*"  --query 'reverse(sort_by(Images, &CreationDate))[0].ImageId' --output text --region "{{ region }}"
+  loop: "{{ ami_basenames }}"
+  register: ami_reg
+
+- name: Create AMI ID and prefix dict
+  ansible.builtin.set_fact:
+    ami_ids: "{{ ami_ids | default({}) | combine ({ item.stdout : item.item }) }}"
+  loop: "{{ ami_reg.results }}"
+  no_log: true
+
+- name: Create a script for the service catalog call
+  ansible.builtin.template:
+    src: call_service_catalog.j2
+    dest: "/usr/local/bin/{{ item.value }}-call-servicecatalog.sh"
+    mode: '0754'
+  loop: "{{ ami_ids | dict2items }}"
+  become: true
+
+- name: Execute the service catalog call
+  ansible.builtin.command: "/bin/bash /usr/local/bin/{{ item.value }}-call-servicecatalog.sh"
+  loop: "{{ ami_ids | dict2items }}"
+  loop_control:
+    pause: 30
+  become: true
+
+- name: Remove temporary script files
+  ansible.builtin.file:
+    path: "/usr/local/bin/{{ item.value }}-call-servicecatalog.sh"
+    state: absent
+  loop: "{{ ami_ids | dict2items }}"
+  ignore_errors: true
+  become: true
