@@ -1,0 +1,61 @@
+---
+# This requires awscli v2 - not compatible with v1
+- name: Stat the packer logfile
+  ansible.builtin.stat:
+    path: "{{ packer_log_dir }}packer_output.txt"
+  register: packer_log_reg
+
+- name: Fail when the packer log is not found
+  ansible.builtin.fail:
+    msg: "Packer logfile not found in {{ packer_log_dir }}"
+  when: packer_log_reg.stat.exists == false
+
+- name: Set facts for image amd AMI name
+  block:
+    - ansible.builtin.shell: /usr/bin/grep 'Creating AMI' "{{ packer_log_dir }}packer_output.txt" | /usr/bin/awk '{print $8}'
+      register: ami_name_reg
+    - ansible.builtin.set_fact:
+        ami_name: "{{ ami_name_reg.stdout }}"
+    - ansible.builtin.shell: /usr/bin/grep '^ap-southeast-2' "{{ packer_log_dir }}packer_output.txt" | /usr/bin/awk '{print $2}'
+      register: ami_id_reg
+    - ansible.builtin.set_fact:
+        ami_id: "{{ ami_id_reg.stdout }}"
+
+- ansible.builtin.debug:
+    msg: "Publishing Stable AMI {{ ami_name }} with ID {{ ami_id }} to AWS account {{ prod_aws_acct }}"
+
+- name: Get Product ID from the Service Catalog
+  ansible.builtin.shell: /usr/local/bin/aws servicecatalog search-products --query "ProductViewSummaries[?Name=='AMI Transporter'].[ProductId]" --output text --region "{{ region }}"
+  register: product_id
+
+- name: Dump Product ID
+  ansible.builtin.debug:
+    msg: "AWS returned Service Catalog Product ID: {{ product_id.stdout }}"
+  when: debug_mode | bool
+
+- name: Get the latest Provisioning artefact info and parse the Version ID
+  ansible.builtin.shell: /usr/local/bin/aws servicecatalog list-provisioning-artifacts --product-id "{{ product_id.stdout }}" --query "ProvisioningArtifactDetails[*].Id" --output text --region "{{ region }}"
+  register: version_id
+
+- name: Dump version_id
+  ansible.builtin.debug:
+    msg: "AWS returned Product Version ID: {{ version_id.stdout }}"
+  when: debug_mode | bool
+
+- name: Create a script for the service catalog call
+  ansible.builtin.template:
+    src: call_service_catalog.j2
+    dest: "/usr/local/bin/{{ ami_name }}-call-servicecatalog.sh"
+    mode: '0754'
+  become: true
+
+- name: Execute the service catalog call
+  ansible.builtin.command: "/bin/bash /usr/local/bin/{{ ami_name }}-call-servicecatalog.sh"
+  become: true
+
+- name: Remove temporary script files
+  ansible.builtin.file:
+    path: "/usr/local/bin/{{ ami_name }}-call-servicecatalog.sh"
+    state: absent
+  ignore_errors: true
+  become: true
