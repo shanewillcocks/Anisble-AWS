@@ -1,0 +1,10 @@
+---
+nonprod_aws_acct: "nnnnnnnnnnnn"
+prod_aws_acct: "nnnnnnnnnnnn"
+key_arn: "ebscmk_arn"
+region: "ap-southeast-2"
+ami_basenames:
+  - "RHEL8"
+  - "RHEL9"
+  - "RHEL10"
+debug_mode: false
