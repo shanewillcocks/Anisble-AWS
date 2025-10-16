@@ -6,7 +6,7 @@ echo "Step 3. Terminate running Packer EC2 instances" >> $log_file
 instances=$(./aws ec2 describe-instances --filters "Name=key-name,Values=builder_*" --query "Reservations[*].Instances[*].InstanceId" --output text)
 # Terminate the instances
 if [ -z "$instances" ]; then
-  echo "No Packer initiated EC2 instances found, skipping step" >> $log_file
+  echo "No Builder initiated EC2 instances found, skipping step" >> $log_file
 else
   delete_count=0
   for instance in $instances
