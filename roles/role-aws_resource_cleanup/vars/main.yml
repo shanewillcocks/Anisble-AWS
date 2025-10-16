@@ -2,4 +2,6 @@
 aws_landing_zone: "{{ aws_landing_zone | default('nnnnnnnnnnnn') }}"
 aws_region: "ap-southeast-2"
 log_file: "/tmp/aws_resource_cleanup.log"
+is_nonprod: false
+is_prod: false
 ops_email: 'ops_email@com'
